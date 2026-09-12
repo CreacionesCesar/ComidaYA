@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mi Menú — Pedidos online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase (compat, para poder usarlo con un solo archivo sin build) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --bg: #FCF9F1;
+    --ink: #2B241E;
+    --ink-soft: #6B6055;
+    --line: #E7DFCF;
+    --surface: #FFFFFF;
+    --primary: #A3311F;
+    --primary-dark: #7C2417;
+    --secondary: #59684A;
+    --gold: #C98A1F;
+    --transit: #3F7D87;
+    --exito: #8FBF6E;
+    --alerta-texto: #D9705C;
+    --admin-bg: #211D19;
+    --admin-surface: #2C2620;
+    --admin-line: #45392E;
+    --radius-s: 3px;
+    --radius-m: 6px;
+    --font-display: "Fraunces", serif;
+    --font-body: "Karla", sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  #app{ min-height:100vh; }
+  button{ font-family: var(--font-body); cursor:pointer; }
+  input, select, textarea{ font-family: var(--font-body); }
+  a{ color: inherit; }
+
+  /* ---------- layout general vista cliente ---------- */
+  .contenedor{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+    padding-bottom: 90px;
+  }
+  .encabezado{
+    padding: 34px 20px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .encabezado h1{
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 600;
+    font-size: 34px;
+    margin: 0 0 4px;
+    color: var(--primary-dark);
+  }
+  .encabezado p{
+    margin:0;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  .categorias{
+    display:flex;
+    gap:8px;
+    padding: 14px 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .categorias::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .chip.activo{
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+
+  .grupo-categoria{ padding: 4px 20px 0; }
+  .grupo-categoria h2{
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--secondary);
+    margin: 22px 0 6px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--secondary);
+    display:inline-block;
+  }
+  .item-comida{
+    display:flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .item-comida.agotado{ opacity: .5; }
+  .item-comida .info{ flex:1; min-width:0; }
+  .item-comida .info h3{
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 3px;
+  }
+  .item-comida .info p{
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+  .item-comida .precio{
+    font-weight: 700;
+    color: var(--gold);
+    font-size: 15px;
+  }
+  .item-comida .agotado-label{
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .control-cantidad{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex: 0 0 auto;
+  }
+  .btn-agregar{
+    background: var(--ink);
+    color:#fff;
+    border:none;
+    width: 34px; height: 34px;
+    border-radius: var(--radius-s);
+    font-size: 18px;
+    line-height:1;
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    gap:0;
+    border: 1px solid var(--ink);
+    border-radius: var(--radius-s);
+    overflow:hidden;
+  }
+  .stepper button{
+    background: var(--ink);
+    color:#fff;
+    border:none;
+    width: 30px; height: 34px;
+    font-size: 16px;
+  }
+  .stepper span{
+    width: 26px;
+    text-align:center;
+    font-weight:700;
+    font-size: 14px;
+  }
+
+  .barra-carrito{
+    position: fixed;
+    bottom: 0; left:0; right:0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--ink);
+    color:#fff;
+    padding: 14px 18px;
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    border-radius: var(--radius-m) var(--radius-m) 0 0;
+  }
+  .barra-carrito .txt{ font-size: 13px; }
+  .barra-carrito .txt b{ display:block; font-family: var(--font-display); font-size: 17px; }
+  .barra-carrito button{
+    background: var(--gold);
+    color: var(--ink);
+    border:none;
+    padding: 10px 18px;
+    border-radius: var(--radius-s);
+    font-weight:700;
+    font-size: 14px;
+  }
+
+  /* ---------- hoja modal (carrito / checkout) ---------- */
+  .fondo-hoja{
+    position: fixed; inset:0;
+    background: rgba(43,36,30,.45);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index: 40;
+  }
+  .hoja{
+    background: var(--bg);
+    width:100%; max-width: 480px;
+    max-height: 88vh;
+    overflow-y:auto;
+    border-radius: 16px 16px 0 0;
+    padding: 20px 20px 28px;
+  }
+  .hoja-header{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom: 14px;
+  }
+  .hoja-header h2{
+    font-family: var(--font-display);
+    font-weight:600; font-size:20px; margin:0;
+  }
+  .cerrar{
+    background:none; border:none; font-size: 22px; color: var(--ink-soft); line-height:1;
+  }
+  .fila-carrito{
+    display:flex; justify-content:space-between; align-items:center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .fila-carrito .nom{ font-weight:600; font-size:14px; }
+  .fila-carrito .sub{ font-size:12px; color:var(--ink-soft); }
+  .fila-carrito .quitar{ background:none; border:none; color:var(--primary); font-size:13px; font-weight:700; }
+
+  .totalizador{
+    display:flex; justify-content:space-between;
+    padding: 14px 0 4px;
+    font-family: var(--font-display);
+    font-size: 18px; font-weight: 600;
+  }
+  .btn-primario{
+    width:100%;
+    background: var(--primary);
+    color:#fff;
+    border:none;
+    padding: 14px;
+    border-radius: var(--radius-s);
+    font-weight:700;
+    font-size: 15px;
+    margin-top: 12px;
+  }
+  .btn-primario:disabled{ background: var(--line); color: var(--ink-soft); }
+
+  .campo{ margin-bottom: 14px; }
+  .campo label{ display:block; font-size:12px; font-weight:700; color: var(--ink-soft); margin-bottom:5px; }
+  .campo input, .campo textarea, .campo select{
+    width:100%;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-s);
+    font-size: 14px;
+    background: var(--surface);
+  }
+  .campo textarea{ resize: vertical; min-height: 60px; }
+  .opciones-pago{ display:flex; gap:8px; }
+  .opciones-pago label{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius: var(--radius-s);
+    padding: 11px 10px;
+    text-align:center;
+    font-size:13px; font-weight:600;
+    background: var(--surface);
+  }
+  .opciones-pago input{ display:none; }
+  .opciones-pago input:checked + span{ color: var(--primary); }
+  .opciones-pago label:has(input:checked){ border-color: var(--primary); background:#FCEFEA; }
+  .datos-transferencia{
+    background: #FCEFEA;
+    border-radius: var(--radius-s);
+    padding: 12px;
+    font-size: 13px;
+    margin-top: 4px;
+    line-height:1.6;
+  }
+
+  /* ---------- seguimiento del pedido ---------- */
+  .pantalla-seguimiento{ padding: 50px 24px 20px; }
+  .numero-seguimiento{
+    font-family: var(--font-display);
+    font-size: 22px; font-weight:600;
+    color: var(--primary-dark);
+    margin: 0 0 26px;
+  }
+  .pasos-seguimiento{ margin-bottom: 22px; }
+  .paso-seguimiento{
+    display:flex; align-items:center; gap:12px;
+    padding: 9px 0;
+    opacity:.4;
+  }
+  .paso-seguimiento.hecho{ opacity:1; }
+  .paso-seguimiento.actual{ opacity:1; }
+  .paso-seguimiento.actual .texto-paso{ font-weight:700; }
+  .punto-paso{
+    width:26px; height:26px; border-radius:50%;
+    background: var(--line);
+    color: var(--ink-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700;
+    flex: 0 0 auto;
+  }
+  .paso-seguimiento.hecho .punto-paso{ background: var(--secondary); color:#fff; }
+  .paso-seguimiento.actual .punto-paso{ background: var(--primary); color:#fff; }
+  .texto-paso{ font-size:14px; }
+  .aviso-en-camino{
+    background: var(--transit);
+    color:#fff;
+    padding: 13px 14px;
+    border-radius: var(--radius-s);
+    font-weight:700;
+    text-align:center;
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .resumen-seguimiento{
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    padding: 14px 0;
+    margin-bottom: 22px;
+    font-size:14px;
+  }
+  .resumen-seguimiento .fila-item{
+    display:flex; justify-content:space-between;
+    padding: 3px 0;
+    color: var(--ink-soft);
+  }
+  .total-seguimiento{
+    display:flex; justify-content:space-between;
+    font-weight:700;
+    margin-top:8px;
+    font-family: var(--font-display);
+    font-size:17px;
+  }
+
+  .acceso-admin{
+    text-align:center;
+    padding: 18px 0 30px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .acceso-admin a{ text-decoration: underline; }
+
+  /* ---------- vista admin ---------- */
+  .admin{
+    min-height: 100vh;
+    background: var(--admin-bg);
+    color: #F2ECE2;
+  }
+  .admin-login{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding: 20px;
+  }
+  .tarjeta-login{
+    background: var(--admin-surface);
+    padding: 32px 26px;
+    border-radius: var(--radius-m);
+    width:100%; max-width: 340px;
+    border: 1px solid var(--admin-line);
+  }
+  .tarjeta-login h2{
+    font-family: var(--font-display);
+    font-weight:600;
+    margin:0 0 20px;
+    color: var(--gold);
+  }
+  .tarjeta-login .campo label{ color:#B8AD9E; }
+  .tarjeta-login .campo input{
+    background: var(--admin-bg);
+    border-color: var(--admin-line);
+    color:#F2ECE2;
+  }
+  .error-login{ color:#E08A75; font-size:13px; margin-top:-6px; margin-bottom:12px; }
+
+  .admin-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 20px;
+    border-bottom: 1px solid var(--admin-line);
+  }
+  .admin-header h1{
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 22px; margin:0;
+    color: var(--gold);
+  }
+  .btn-salir{ background:none; border:none; color:#B8AD9E; font-size:13px; text-decoration:underline; }
+
+  .admin-tabs{
+    display:flex; gap: 22px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--admin-line);
+  }
+  .admin-tabs button{
+    background:none; border:none;
+    color:#B8AD9E;
+    padding: 14px 0;
+    font-size: 14px; font-weight:600;
+    border-bottom: 2px solid transparent;
+    position:relative;
+  }
+  .admin-tabs button.activo{ color:#fff; border-bottom-color: var(--gold); }
+  .insignia{
+    background: var(--primary);
+    color:#fff;
+    font-size: 10px;
+    border-radius: 999px;
+    padding: 1px 6px;
+    margin-left: 6px;
+  }
+
+  .admin-contenido{ padding: 20px; max-width: 640px; margin: 0 auto; }
+
+  .btn-secundario-admin{
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 9px 14px;
+    border-radius: var(--radius-s);
+    font-size: 13px; font-weight:700;
+  }
+  .btn-oro{
+    background: var(--gold);
+    border:none;
+    color: var(--admin-bg);
+    padding: 11px 16px;
+    border-radius: var(--radius-s);
+    font-weight:700;
+    font-size: 14px;
+  }
+
+  .form-comida{
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--radius-m);
+    padding: 16px;
+    margin: 16px 0;
+  }
+  .form-comida .campo label{ color:#B8AD9E; }
+  .form-comida .campo input, .form-comida .campo textarea, .form-comida .campo select{
+    background: var(--admin-bg);
+    border-color: var(--admin-line);
+    color: #F2ECE2;
+  }
+  .fila-form{ display:flex; gap:10px; }
+  .fila-form .campo{ flex:1; }
+  .disponible-switch{ display:flex; align-items:center; gap:8px; font-size:13px; color:#B8AD9E; margin-bottom:14px; }
+
+  .fila-comida-admin{
+    display:flex; justify-content:space-between; align-items:center;
+    gap: 10px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--admin-line);
+  }
+  .fila-comida-admin.agotado{ opacity:.45; }
+  .fila-comida-admin .nom{ font-weight:700; font-size:15px; }
+  .fila-comida-admin .cat{ font-size:12px; color:#B8AD9E; }
+  .fila-comida-admin .precio{ color: var(--gold); font-weight:700; font-size:14px; }
+  .acciones-comida{ display:flex; gap:8px; flex:0 0 auto; }
+  .acciones-comida button{
+    background: none; border: 1px solid var(--admin-line);
+    color: #F2ECE2; width:30px; height:30px; border-radius: var(--radius-s);
+    font-size: 14px;
+  }
+
+  .filtros-pedidos{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 14px; }
+  .filtros-pedidos button{
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line);
+    color: #B8AD9E;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px; font-weight:700;
+  }
+  .filtros-pedidos button.activo{ background: var(--gold); border-color:var(--gold); color: var(--admin-bg); }
+
+  .tarjeta-pedido{
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line);
+    border-left: 4px solid var(--gold);
+    border-radius: var(--radius-m);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .tarjeta-pedido.estado-nuevo{ border-left-color: var(--primary); }
+  .tarjeta-pedido.estado-preparando{ border-left-color: var(--gold); }
+  .tarjeta-pedido.estado-listo{ border-left-color: var(--secondary); }
+  .tarjeta-pedido.estado-en_camino{ border-left-color: var(--transit); }
+  .tarjeta-pedido.estado-entregado{ border-left-color: var(--admin-line); opacity:.55; }
+  .cabecera-pedido{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  .cabecera-pedido .num{ font-family: var(--font-display); font-size:18px; font-weight:700; }
+  .cabecera-pedido .hora{ font-size:11px; color:#B8AD9E; }
+  .detalle-pedido{ font-size: 13px; color:#D9CFC0; line-height:1.6; margin-bottom:10px; }
+  .detalle-pedido b{ color:#fff; }
+  .items-pedido{ font-size:13px; margin: 6px 0 10px; }
+  .items-pedido div{ display:flex; justify-content:space-between; padding: 2px 0; }
+  .pie-pedido{ display:flex; justify-content:space-between; align-items:center; }
+  .total-pedido{ font-weight:700; color: var(--gold); }
+  .selector-estado select{
+    background: var(--admin-bg);
+    border: 1px solid var(--admin-line);
+    color:#F2ECE2;
+    padding: 7px 10px;
+    border-radius: var(--radius-s);
+    font-size: 12px; font-weight:700;
+  }
+
+  .vacio{ text-align:center; color: var(--ink-soft); padding: 40px 20px; font-size:14px; }
+  .admin .vacio{ color:#B8AD9E; }
+
+  /* ---------- módulo de caja ---------- */
+  .filtro-fechas{ display:flex; gap:10px; align-items:flex-end; margin-bottom:6px; flex-wrap:wrap; }
+  .filtro-fechas .campo{ flex:1; min-width:120px; margin-bottom:0; }
+  .resumen-caja{
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line);
+    border-radius: var(--radius-m);
+    padding: 14px 16px;
+    margin: 16px 0;
+  }
+  .fila-resumen{ display:flex; justify-content:space-between; padding: 4px 0; font-size:14px; color:#D9CFC0; }
+  .fila-resumen.total{
+    border-top: 1px solid var(--admin-line);
+    margin-top: 6px; padding-top:10px;
+    font-family: var(--font-display);
+    font-size: 18px;
+  }
+  .monto-venta{ color: var(--exito); font-weight:700; }
+  .monto-gasto{ color: var(--alerta-texto); font-weight:700; }
+  .positivo{ color: var(--exito); font-weight:700; }
+  .negativo{ color: var(--alerta-texto); font-weight:700; }
+  .grupo-dia{ margin: 18px 0; }
+  .cabecera-dia{
+    display:flex; justify-content:space-between;
+    font-family: var(--font-display);
+    font-weight:600; font-size:14px;
+    color: var(--gold);
+    padding-bottom:6px;
+    border-bottom: 1px solid var(--admin-line);
+    margin-bottom: 4px;
+  }
+  .fila-movimiento{
+    display:flex; justify-content:space-between;
+    padding: 7px 0;
+    font-size:13px;
+    border-bottom: 1px solid var(--admin-line);
+    color:#D9CFC0;
+  }
+
+  /* ---------- pantalla de configuración inicial ---------- */
+  .setup{
+    max-width: 640px; margin: 0 auto;
+    padding: 40px 24px;
+    font-family: var(--font-body);
+    line-height: 1.7;
+  }
+  .setup h1{ font-family: var(--font-display); color: var(--primary-dark); }
+  .setup code{
+    background: #F1E8D8; padding: 2px 6px; border-radius: 4px; font-size: 13px;
+  }
+  .setup pre{
+    background: var(--ink); color:#F2ECE2; padding:16px; border-radius: var(--radius-m);
+    overflow-x:auto; font-size: 12px; line-height:1.6;
+  }
+  .setup ol{ padding-left: 20px; }
+  .setup li{ margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ======================================================================
+   1) CONFIGURACIÓN — completar con los datos de tu proyecto de Firebase
+   ====================================================================== */
+
+// Reemplazá esto con la configuración de TU proyecto Firebase
+// (Firebase console → ⚙ Configuración del proyecto → tus apps → SDK setup)
+const firebaseConfig = {
+  apiKey: "AIzaSyAcMw2SLHZoCs_QWbnbJgiplPdyVif0DAw",
+  authDomain: "comidaya-d53f5.firebaseapp.com",
+  projectId: "comidaya-d53f5",
+  storageBucket: "comidaya-d53f5.firebasestorage.app",
+  messagingSenderId: "354124817879",
+  appId: "1:354124817879:web:1ca83247d403e19ce7d792"
+};
+
+// Usuario y contraseña del panel de administración.
+// Si ya cambiaste estos valores en GitHub, volvé a ponerlos acá después de pegar el archivo.
+const ADMIN_USUARIO = "yamila";
+const ADMIN_PASSWORD = "1234";
+
+/* ====================================================================== */
+
+const SIN_CONFIGURAR = firebaseConfig.apiKey === "PEGAR_TU_API_KEY_AQUI";
+
+let db = null;
+if(!SIN_CONFIGURAR){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+}
+
+// ---------- estado ----------
+let comidas = [];
+let pedidos = [];
+let configNegocio = { nombreNegocio: "Mi Menú", tagline: "Pedidos online", transferenciaAlias: "", transferenciaCBU: "", direccionRetiro: "" };
+let categoriaActiva = "Todas";
+let cart = [];
+let vista = location.hash === "#admin" ? (localStorage.getItem("admin_logueado") === "1" ? "admin" : "admin-login") : "cliente";
+let carritoAbierto = false;
+let checkoutAbierto = false;
+let pedidoConfirmado = null;
+let errorLogin = "";
+let adminTab = "comidas";
+let filtroPedidos = "activos";
+let editandoComidaId = null;
+let mostrandoFormComida = false;
+let unsubPedidos = null;
+let cantidadPedidosPrevia = null;
+let unsubSeguimiento = null;
+let estadoPedidoAnterior = null;
+let movimientos = [];
+let unsubMovimientos = null;
+let mostrandoFormGasto = false;
+let filtroFechaDesde = "";
+let filtroFechaHasta = "";
+
+window.addEventListener("hashchange", () => {
+  if(location.hash === "#admin"){
+    vista = localStorage.getItem("admin_logueado") === "1" ? "admin" : "admin-login";
+    if(vista === "admin"){ suscribirPedidos(); suscribirMovimientos(); }
+  } else {
+    vista = "cliente";
+  }
+  render();
+});
+
+// ---------- utilidades ----------
+function money(n){
+  return "$" + Number(n||0).toLocaleString("es-AR");
+}
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function beep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 180].forEach(delay => {
+      setTimeout(() => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = 740; g.gain.value = 0.08;
+        o.start(); o.stop(ctx.currentTime + 0.12);
+      }, delay);
+    });
+  }catch(e){}
+}
+
+/* ======================================================================
+   2) DATOS EN VIVO (Firestore)
+   ====================================================================== */
+if(db){
+  db.collection("comidas").orderBy("categoria").onSnapshot(snap => {
+    comidas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  });
+  db.collection("config").doc("general").onSnapshot(doc => {
+    if(doc.exists) configNegocio = { ...configNegocio, ...doc.data() };
+    render();
+  });
+  if(vista === "admin"){ suscribirPedidos(); suscribirMovimientos(); }
+  const idPedidoGuardado = localStorage.getItem("pedido_seguimiento_id");
+  if(idPedidoGuardado) iniciarSeguimiento(idPedidoGuardado);
+}
+
+function suscribirPedidos(){
+  if(!db || unsubPedidos) return;
+  unsubPedidos = db.collection("pedidos").orderBy("creado", "desc").onSnapshot(snap => {
+    pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const nuevos = pedidos.filter(p => p.estado === "nuevo").length;
+    if(cantidadPedidosPrevia !== null && nuevos > cantidadPedidosPrevia) beep();
+    cantidadPedidosPrevia = nuevos;
+    render();
+  });
+}
+function desuscribirPedidos(){
+  if(unsubPedidos){ unsubPedidos(); unsubPedidos = null; }
+}
+
+/* ======================================================================
+   3) LADO CLIENTE
+   ====================================================================== */
+function agregarAlCarrito(id){
+  const comida = comidas.find(c => c.id === id);
+  if(!comida) return;
+  const existente = cart.find(c => c.id === id);
+  if(existente) existente.cantidad++;
+  else cart.push({ id, nombre: comida.nombre, precio: comida.precio, cantidad: 1 });
+  render();
+}
+function cambiarCantidad(id, delta){
+  const item = cart.find(c => c.id === id);
+  if(!item) return;
+  item.cantidad += delta;
+  if(item.cantidad <= 0) cart = cart.filter(c => c.id !== id);
+  render();
+}
+function quitarDelCarrito(id){
+  cart = cart.filter(c => c.id !== id);
+  render();
+}
+function totalCarrito(){
+  return cart.reduce((t, i) => t + i.precio * i.cantidad, 0);
+}
+function cantidadEnCarrito(id){
+  const item = cart.find(c => c.id === id);
+  return item ? item.cantidad : 0;
+}
+function abrirCarrito(){ carritoAbierto = true; render(); }
+function cerrarCarrito(){ carritoAbierto = false; render(); }
+function irACheckout(){ carritoAbierto = false; checkoutAbierto = true; render(); }
+function cerrarCheckout(){ checkoutAbierto = false; render(); }
+function setCategoria(cat){ categoriaActiva = cat; render(); }
+
+async function confirmarPedido(){
+  const nombre = document.getElementById("cli-nombre").value.trim();
+  const telefono = document.getElementById("cli-telefono").value.trim();
+  const tipoEntrega = document.getElementById("cli-entrega").value;
+  const direccion = tipoEntrega === "envio" ? document.getElementById("cli-direccion").value.trim() : "";
+  const metodoPago = document.querySelector('input[name="pago"]:checked').value;
+  const notas = document.getElementById("cli-notas").value.trim();
+
+  if(!nombre || !telefono || (tipoEntrega === "envio" && !direccion)){
+    alert("Completá nombre, teléfono" + (tipoEntrega === "envio" ? " y dirección" : "") + " para continuar.");
+    return;
+  }
+
+  const boton = document.getElementById("btn-confirmar-pedido");
+  boton.disabled = true; boton.textContent = "Enviando...";
+
+  try{
+    const numero = await generarNumeroPedido();
+    const totalPedido = totalCarrito();
+    const refPedido = await db.collection("pedidos").add({
+      numero, nombre, telefono, tipoEntrega, direccion, metodoPago, notas,
+      items: cart.map(i => ({ nombre: i.nombre, precio: i.precio, cantidad: i.cantidad })),
+      total: totalPedido,
+      estado: "nuevo",
+      creado: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    db.collection("movimientos").add({
+      tipo: "venta",
+      descripcion: "Pedido #" + numero,
+      monto: totalPedido,
+      pedidoNumero: numero,
+      fecha: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    cart = [];
+    checkoutAbierto = false;
+    iniciarSeguimiento(refPedido.id);
+  }catch(e){
+    alert("No se pudo enviar el pedido. Probá de nuevo.");
+    boton.disabled = false; boton.textContent = "Confirmar pedido";
+  }
+  render();
+}
+async function generarNumeroPedido(){
+  const ref = db.collection("config").doc("contador");
+  let numero;
+  await db.runTransaction(async t => {
+    const doc = await t.get(ref);
+    const actual = doc.exists ? (doc.data().ultimoPedido || 0) : 0;
+    numero = actual + 1;
+    t.set(ref, { ultimoPedido: numero }, { merge: true });
+  });
+  return numero;
+}
+
+// Sigue en vivo el estado de un pedido puntual y avisa con sonido cuando pasa a "en camino".
+function iniciarSeguimiento(id){
+  if(unsubSeguimiento) unsubSeguimiento();
+  localStorage.setItem("pedido_seguimiento_id", id);
+  unsubSeguimiento = db.collection("pedidos").doc(id).onSnapshot(doc => {
+    if(!doc.exists){ finalizarSeguimiento(); return; }
+    const datos = doc.data();
+    if(estadoPedidoAnterior !== null && estadoPedidoAnterior !== datos.estado && datos.estado === "en_camino"){
+      beep();
+    }
+    estadoPedidoAnterior = datos.estado;
+    pedidoConfirmado = { id, numero: datos.numero, total: datos.total, items: datos.items, estado: datos.estado };
+    render();
+  });
+}
+function finalizarSeguimiento(){
+  if(unsubSeguimiento){ unsubSeguimiento(); unsubSeguimiento = null; }
+  localStorage.removeItem("pedido_seguimiento_id");
+  pedidoConfirmado = null;
+  estadoPedidoAnterior = null;
+  render();
+}
+
+function renderCliente(){
+  const disponibles = comidas.filter(c => c.disponible !== false || true);
+  const categorias = ["Todas", ...new Set(comidas.map(c => c.categoria).filter(Boolean))];
+  const items = categoriaActiva === "Todas" ? comidas : comidas.filter(c => c.categoria === categoriaActiva);
+  const porCategoria = {};
+  items.forEach(c => { (porCategoria[c.categoria || "Menú"] ??= []).push(c); });
+
+  if(pedidoConfirmado){
+    return `<div class="contenedor" style="padding-bottom:20px;">${renderSeguimiento(pedidoConfirmado)}</div>`;
+  }
+
+  return `
+    <div class="contenedor">
+      <div class="encabezado">
+        <h1>${esc(configNegocio.nombreNegocio)}</h1>
+        <p>${esc(configNegocio.tagline)}</p>
+      </div>
+      <div class="categorias">
+        ${categorias.map(c => `<button class="chip ${c === categoriaActiva ? "activo" : ""}" onclick="setCategoria('${esc(c)}')">${esc(c)}</button>`).join("")}
+      </div>
+      ${comidas.length === 0 ? `<div class="vacio">Todavía no hay comidas cargadas.</div>` : ""}
+      ${Object.keys(porCategoria).map(cat => `
+        <div class="grupo-categoria">
+          <h2>${esc(cat)}</h2>
+          ${porCategoria[cat].map(c => renderItemMenu(c)).join("")}
+        </div>
+      `).join("")}
+      ${cart.length > 0 ? `
+        <div class="barra-carrito">
+          <div class="txt">${cart.reduce((n,i)=>n+i.cantidad,0)} producto(s)<b>${money(totalCarrito())}</b></div>
+          <button onclick="abrirCarrito()">Ver pedido</button>
+        </div>
+      ` : ""}
+      <div class="acceso-admin"><a href="#admin">Acceso administrador</a></div>
+    </div>
+    ${carritoAbierto ? renderHojaCarrito() : ""}
+    ${checkoutAbierto ? renderHojaCheckout() : ""}
+  `;
+}
+
+function renderSeguimiento(p){
+  const pasos = [
+    { id: "nuevo", label: "Pedido recibido" },
+    { id: "preparando", label: "En preparación" },
+    { id: "listo", label: "Listo" },
+    { id: "en_camino", label: "En camino" },
+    { id: "entregado", label: "Entregado" }
+  ];
+  const indiceActual = pasos.findIndex(paso => paso.id === p.estado);
+  return `
+    <div class="pantalla-seguimiento">
+      <div class="numero-seguimiento">Pedido #${p.numero}</div>
+      <div class="pasos-seguimiento">
+        ${pasos.map((paso, i) => `
+          <div class="paso-seguimiento ${i < indiceActual ? "hecho" : ""} ${i === indiceActual ? "actual" : ""}">
+            <span class="punto-paso">${i < indiceActual ? "✓" : i + 1}</span>
+            <span class="texto-paso">${paso.label}</span>
+          </div>
+        `).join("")}
+      </div>
+      ${p.estado === "en_camino" ? `<div class="aviso-en-camino">Tu pedido está en camino</div>` : ""}
+      <div class="resumen-seguimiento">
+        ${(p.items || []).map(i => `<div class="fila-item"><span>${i.cantidad} × ${esc(i.nombre)}</span><span>${money(i.precio * i.cantidad)}</span></div>`).join("")}
+        <div class="total-seguimiento"><span>Total</span><span>${money(p.total)}</span></div>
+      </div>
+      <button class="btn-primario" onclick="finalizarSeguimiento()">Hacer otro pedido</button>
+    </div>
+  `;
+}
+
+function renderItemMenu(c){
+  const agotado = c.disponible === false;
+  const cant = cantidadEnCarrito(c.id);
+  return `
+    <div class="item-comida ${agotado ? "agotado" : ""}">
+      <div class="info">
+        <h3>${esc(c.nombre)}</h3>
+        ${c.descripcion ? `<p>${esc(c.descripcion)}</p>` : ""}
+        ${agotado ? `<span class="agotado-label">Agotado</span>` : `<span class="precio">${money(c.precio)}</span>`}
+      </div>
+      ${agotado ? "" : `
+        <div class="control-cantidad">
+          ${cant === 0
+            ? `<button class="btn-agregar" onclick="agregarAlCarrito('${c.id}')">+</button>`
+            : `<div class="stepper">
+                 <button onclick="cambiarCantidad('${c.id}', -1)">–</button>
+                 <span>${cant}</span>
+                 <button onclick="cambiarCantidad('${c.id}', 1)">+</button>
+               </div>`
+          }
+        </div>`}
+    </div>
+  `;
+}
+
+function renderHojaCarrito(){
+  return `
+    <div class="fondo-hoja" onclick="if(event.target===this) cerrarCarrito()">
+      <div class="hoja">
+        <div class="hoja-header"><h2>Tu pedido</h2><button class="cerrar" onclick="cerrarCarrito()">×</button></div>
+        ${cart.length === 0 ? `<div class="vacio">Todavía no agregaste nada.</div>` : cart.map(i => `
+          <div class="fila-carrito">
+            <div>
+              <div class="nom">${esc(i.nombre)}</div>
+              <div class="sub">${i.cantidad} × ${money(i.precio)}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="stepper">
+                <button onclick="cambiarCantidad('${i.id}', -1)">–</button>
+                <span>${i.cantidad}</span>
+                <button onclick="cambiarCantidad('${i.id}', 1)">+</button>
+              </div>
+              <button class="quitar" onclick="quitarDelCarrito('${i.id}')">Quitar</button>
+            </div>
+          </div>
+        `).join("")}
+        ${cart.length > 0 ? `
+          <div class="totalizador"><span>Total</span><span>${money(totalCarrito())}</span></div>
+          <button class="btn-primario" onclick="irACheckout()">Continuar</button>
+        ` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderHojaCheckout(){
+  return `
+    <div class="fondo-hoja" onclick="if(event.target===this) cerrarCheckout()">
+      <div class="hoja">
+        <div class="hoja-header"><h2>Datos del pedido</h2><button class="cerrar" onclick="cerrarCheckout()">×</button></div>
+
+        <div class="campo"><label>Nombre y apellido</label><input id="cli-nombre" placeholder="Tu nombre"></div>
+        <div class="campo"><label>Teléfono</label><input id="cli-telefono" placeholder="Ej: 351 555 5555" type="tel"></div>
+
+        <div class="campo">
+          <label>Entrega</label>
+          <select id="cli-entrega" onchange="render()">
+            <option value="retiro">Retiro en el local</option>
+            <option value="envio">Envío a domicilio</option>
+          </select>
+        </div>
+        ${document.getElementById("cli-entrega")?.value === "envio" ? `
+          <div class="campo"><label>Dirección</label><input id="cli-direccion" placeholder="Calle, número, barrio"></div>
+        ` : ""}
+
+        <div class="campo">
+          <label>Método de pago</label>
+          <div class="opciones-pago">
+            <label><input type="radio" name="pago" value="efectivo" checked onchange="render()"><span>Efectivo</span></label>
+            <label><input type="radio" name="pago" value="transferencia" onchange="render()"><span>Transferencia</span></label>
+          </div>
+          ${document.querySelector('input[name="pago"]:checked')?.value === "transferencia" ? `
+            <div class="datos-transferencia">
+              ${configNegocio.transferenciaAlias ? `<div><b>Alias:</b> ${esc(configNegocio.transferenciaAlias)}</div>` : ""}
+              ${configNegocio.transferenciaCBU ? `<div><b>CBU:</b> ${esc(configNegocio.transferenciaCBU)}</div>` : ""}
+              ${!configNegocio.transferenciaAlias && !configNegocio.transferenciaCBU ? "Datos de transferencia a confirmar." : ""}
+            </div>
+          ` : ""}
+        </div>
+
+        <div class="campo"><label>Notas (opcional)</label><textarea id="cli-notas" placeholder="Aclaraciones sobre el pedido"></textarea></div>
+
+        <div class="totalizador"><span>Total</span><span>${money(totalCarrito())}</span></div>
+        <button class="btn-primario" id="btn-confirmar-pedido" onclick="confirmarPedido()">Confirmar pedido</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ======================================================================
+   4) LADO ADMINISTRADOR
+   ====================================================================== */
+function intentarLogin(){
+  const usuario = document.getElementById("adm-usuario").value.trim();
+  const password = document.getElementById("adm-password").value;
+  if(usuario === ADMIN_USUARIO && password === ADMIN_PASSWORD){
+    localStorage.setItem("admin_logueado", "1");
+    errorLogin = "";
+    vista = "admin";
+    suscribirPedidos();
+    suscribirMovimientos();
+  } else {
+    errorLogin = "Usuario o contraseña incorrectos.";
+  }
+  render();
+}
+function salirAdmin(){
+  localStorage.removeItem("admin_logueado");
+  desuscribirPedidos();
+  desuscribirMovimientos();
+  vista = "admin-login";
+  render();
+}
+function setAdminTab(tab){ adminTab = tab; mostrandoFormComida = false; mostrandoFormGasto = false; render(); }
+
+function suscribirMovimientos(){
+  if(!db || unsubMovimientos) return;
+  unsubMovimientos = db.collection("movimientos").orderBy("fecha", "desc").onSnapshot(snap => {
+    movimientos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  });
+}
+function desuscribirMovimientos(){
+  if(unsubMovimientos){ unsubMovimientos(); unsubMovimientos = null; }
+}
+function mostrarFormGasto(){ mostrandoFormGasto = true; render(); }
+function ocultarFormGasto(){ mostrandoFormGasto = false; render(); }
+async function guardarGasto(){
+  const descripcion = document.getElementById("g-descripcion").value.trim();
+  const monto = Number(document.getElementById("g-monto").value);
+  const fechaInput = document.getElementById("g-fecha").value;
+  if(!descripcion || !monto){ alert("Completá la descripción y el costo."); return; }
+  const fecha = firebase.firestore.Timestamp.fromDate(new Date(fechaInput + "T12:00:00"));
+  await db.collection("movimientos").add({ tipo: "gasto", descripcion, monto, fecha });
+  mostrandoFormGasto = false;
+  render();
+}
+function cambiarFiltroFecha(){
+  filtroFechaDesde = document.getElementById("filtro-desde").value;
+  filtroFechaHasta = document.getElementById("filtro-hasta").value;
+  render();
+}
+function limpiarFiltroFecha(){ filtroFechaDesde = ""; filtroFechaHasta = ""; render(); }
+function claveFecha(ts){
+  const d = ts?.toDate ? ts.toDate() : new Date(ts);
+  return d.toISOString().slice(0, 10);
+}
+function formatoFechaLarga(claveISO){
+  const [y, m, d] = claveISO.split("-").map(Number);
+  const fecha = new Date(y, m - 1, d);
+  const texto = fecha.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function mostrarFormComida(id){
+  editandoComidaId = id || null;
+  mostrandoFormComida = true;
+  render();
+}
+function ocultarFormComida(){ mostrandoFormComida = false; editandoComidaId = null; render(); }
+
+async function guardarComida(){
+  const nombre = document.getElementById("f-nombre").value.trim();
+  const descripcion = document.getElementById("f-descripcion").value.trim();
+  const precio = Number(document.getElementById("f-precio").value);
+  const categoria = document.getElementById("f-categoria").value.trim() || "Menú";
+  const disponible = document.getElementById("f-disponible").checked;
+
+  if(!nombre || !precio){ alert("Completá al menos el nombre y el precio."); return; }
+
+  const datos = { nombre, descripcion, precio, categoria, disponible };
+  if(editandoComidaId){
+    await db.collection("comidas").doc(editandoComidaId).update(datos);
+  } else {
+    await db.collection("comidas").add(datos);
+  }
+  ocultarFormComida();
+}
+async function eliminarComida(id){
+  if(!confirm("¿Eliminar esta comida del menú?")) return;
+  await db.collection("comidas").doc(id).delete();
+}
+async function toggleDisponible(id, valorActual){
+  await db.collection("comidas").doc(id).update({ disponible: !(valorActual !== false) });
+}
+
+function setFiltroPedidos(f){ filtroPedidos = f; render(); }
+async function cambiarEstadoPedido(id, estado){
+  await db.collection("pedidos").doc(id).update({ estado });
+}
+
+async function guardarDatosNegocio(){
+  const datos = {
+    nombreNegocio: document.getElementById("cfg-nombre").value.trim() || "Mi Menú",
+    tagline: document.getElementById("cfg-tagline").value.trim(),
+    transferenciaAlias: document.getElementById("cfg-alias").value.trim(),
+    transferenciaCBU: document.getElementById("cfg-cbu").value.trim(),
+    direccionRetiro: document.getElementById("cfg-direccion").value.trim()
+  };
+  await db.collection("config").doc("general").set(datos, { merge: true });
+  alert("Datos guardados.");
+}
+
+function renderAdminLogin(){
+  return `
+    <div class="admin">
+      <div class="admin-login">
+        <div class="tarjeta-login">
+          <h2>Panel de administración</h2>
+          <div class="campo"><label>Usuario</label><input id="adm-usuario" onkeydown="if(event.key==='Enter') intentarLogin()"></div>
+          <div class="campo"><label>Contraseña</label><input id="adm-password" type="password" onkeydown="if(event.key==='Enter') intentarLogin()"></div>
+          ${errorLogin ? `<div class="error-login">${esc(errorLogin)}</div>` : ""}
+          <button class="btn-oro" style="width:100%;" onclick="intentarLogin()">Entrar</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdmin(){
+  const pedidosNuevos = pedidos.filter(p => p.estado === "nuevo").length;
+  return `
+    <div class="admin">
+      <div class="admin-header">
+        <h1>${esc(configNegocio.nombreNegocio)} · Admin</h1>
+        <button class="btn-salir" onclick="salirAdmin()">Cerrar sesión</button>
+      </div>
+      <div class="admin-tabs">
+        <button class="${adminTab==='comidas'?'activo':''}" onclick="setAdminTab('comidas')">Comidas</button>
+        <button class="${adminTab==='pedidos'?'activo':''}" onclick="setAdminTab('pedidos')">Pedidos${pedidosNuevos>0?`<span class="insignia">${pedidosNuevos}</span>`:""}</button>
+        <button class="${adminTab==='caja'?'activo':''}" onclick="setAdminTab('caja')">Caja</button>
+        <button class="${adminTab==='datos'?'activo':''}" onclick="setAdminTab('datos')">Datos del negocio</button>
+      </div>
+      <div class="admin-contenido">
+        ${adminTab === "comidas" ? renderAdminComidas() : ""}
+        ${adminTab === "pedidos" ? renderAdminPedidos() : ""}
+        ${adminTab === "caja" ? renderAdminCaja() : ""}
+        ${adminTab === "datos" ? renderAdminDatos() : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminComidas(){
+  const c = editandoComidaId ? comidas.find(x => x.id === editandoComidaId) : null;
+  return `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <span style="font-size:13px; color:#B8AD9E;">${comidas.length} comida(s) cargada(s)</span>
+      ${!mostrandoFormComida ? `<button class="btn-oro" onclick="mostrarFormComida()">+ Agregar comida</button>` : ""}
+    </div>
+    ${mostrandoFormComida ? `
+      <div class="form-comida">
+        <div class="campo"><label>Nombre</label><input id="f-nombre" value="${esc(c?.nombre||"")}"></div>
+        <div class="campo"><label>Descripción</label><textarea id="f-descripcion">${esc(c?.descripcion||"")}</textarea></div>
+        <div class="fila-form">
+          <div class="campo"><label>Precio</label><input id="f-precio" type="number" value="${c?.precio||""}"></div>
+          <div class="campo"><label>Categoría</label><input id="f-categoria" placeholder="Ej: Entradas" value="${esc(c?.categoria||"")}"></div>
+        </div>
+        <div class="disponible-switch">
+          <input type="checkbox" id="f-disponible" ${c?.disponible===false?"":"checked"}> Disponible para pedir
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-oro" onclick="guardarComida()">Guardar</button>
+          <button class="btn-secundario-admin" onclick="ocultarFormComida()">Cancelar</button>
+        </div>
+      </div>
+    ` : ""}
+    ${comidas.length === 0 && !mostrandoFormComida ? `<div class="vacio">Agregá tu primera comida para armar el menú.</div>` : ""}
+    ${comidas.map(c => `
+      <div class="fila-comida-admin ${c.disponible===false?'agotado':''}">
+        <div>
+          <div class="nom">${esc(c.nombre)}</div>
+          <div class="cat">${esc(c.categoria||"Menú")} · <span class="precio">${money(c.precio)}</span></div>
+        </div>
+        <div class="acciones-comida">
+          <button title="${c.disponible===false?'Marcar disponible':'Marcar agotado'}" onclick="toggleDisponible('${c.id}', ${c.disponible})">${c.disponible===false?'✓':'⦸'}</button>
+          <button title="Editar" onclick="mostrarFormComida('${c.id}')">✎</button>
+          <button title="Eliminar" onclick="eliminarComida('${c.id}')">×</button>
+        </div>
+      </div>
+    `).join("")}
+  `;
+}
+
+function renderAdminPedidos(){
+  const filtros = [
+    { id: "activos", label: "Activos" },
+    { id: "nuevo", label: "Nuevos" },
+    { id: "preparando", label: "En preparación" },
+    { id: "listo", label: "Listos" },
+    { id: "en_camino", label: "En camino" },
+    { id: "entregado", label: "Entregados" },
+    { id: "todos", label: "Todos" }
+  ];
+  let lista = pedidos;
+  if(filtroPedidos === "activos") lista = pedidos.filter(p => p.estado !== "entregado");
+  else if(filtroPedidos !== "todos") lista = pedidos.filter(p => p.estado === filtroPedidos);
+
+  return `
+    <div class="filtros-pedidos">
+      ${filtros.map(f => `<button class="${filtroPedidos===f.id?'activo':''}" onclick="setFiltroPedidos('${f.id}')">${f.label}</button>`).join("")}
+    </div>
+    ${lista.length === 0 ? `<div class="vacio">No hay pedidos para mostrar.</div>` : lista.map(p => renderTarjetaPedido(p)).join("")}
+  `;
+}
+
+function renderTarjetaPedido(p){
+  const hora = p.creado?.toDate ? p.creado.toDate().toLocaleString("es-AR", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" }) : "";
+  const nombresEstado = { nuevo:"Nuevo", preparando:"En preparación", listo:"Listo", en_camino:"En camino", entregado:"Entregado" };
+  return `
+    <div class="tarjeta-pedido estado-${p.estado}">
+      <div class="cabecera-pedido">
+        <span class="num">#${p.numero}</span>
+        <span class="hora">${hora}</span>
+      </div>
+      <div class="detalle-pedido">
+        <b>${esc(p.nombre)}</b> · ${esc(p.telefono)}<br>
+        ${p.tipoEntrega === "envio" ? `Envío: ${esc(p.direccion)}` : "Retiro en el local"} · Pago: ${p.metodoPago === "efectivo" ? "Efectivo" : "Transferencia"}
+        ${p.notas ? `<br>Nota: ${esc(p.notas)}` : ""}
+      </div>
+      <div class="items-pedido">
+        ${(p.items||[]).map(i => `<div><span>${i.cantidad} × ${esc(i.nombre)}</span><span>${money(i.precio*i.cantidad)}</span></div>`).join("")}
+      </div>
+      <div class="pie-pedido">
+        <span class="total-pedido">${money(p.total)}</span>
+        <div class="selector-estado">
+          <select onchange="cambiarEstadoPedido('${p.id}', this.value)">
+            ${Object.keys(nombresEstado).map(e => `<option value="${e}" ${p.estado===e?"selected":""}>${nombresEstado[e]}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminCaja(){
+  const desde = filtroFechaDesde ? new Date(filtroFechaDesde + "T00:00:00") : null;
+  const hasta = filtroFechaHasta ? new Date(filtroFechaHasta + "T23:59:59") : null;
+  const filtrados = movimientos.filter(m => {
+    const f = m.fecha?.toDate ? m.fecha.toDate() : new Date(m.fecha);
+    if(desde && f < desde) return false;
+    if(hasta && f > hasta) return false;
+    return true;
+  });
+  const totalVentas = filtrados.filter(m => m.tipo === "venta").reduce((t, m) => t + m.monto, 0);
+  const totalGastos = filtrados.filter(m => m.tipo === "gasto").reduce((t, m) => t + m.monto, 0);
+  const neto = totalVentas - totalGastos;
+
+  const porDia = {};
+  filtrados.forEach(m => { (porDia[claveFecha(m.fecha)] ??= []).push(m); });
+  const dias = Object.keys(porDia).sort((a, b) => b.localeCompare(a));
+
+  return `
+    <div class="filtro-fechas">
+      <div class="campo"><label>Desde</label><input type="date" id="filtro-desde" value="${filtroFechaDesde}" onchange="cambiarFiltroFecha()"></div>
+      <div class="campo"><label>Hasta</label><input type="date" id="filtro-hasta" value="${filtroFechaHasta}" onchange="cambiarFiltroFecha()"></div>
+      ${(filtroFechaDesde || filtroFechaHasta) ? `<button class="btn-secundario-admin" onclick="limpiarFiltroFecha()">Ver todo</button>` : ""}
+    </div>
+
+    <div class="resumen-caja">
+      <div class="fila-resumen"><span>Ventas</span><span class="monto-venta">${money(totalVentas)}</span></div>
+      <div class="fila-resumen"><span>Gastos</span><span class="monto-gasto">${money(totalGastos)}</span></div>
+      <div class="fila-resumen total"><span>Total</span><span class="${neto >= 0 ? "positivo" : "negativo"}">${neto >= 0 ? "+" : "−"}${money(Math.abs(neto))}</span></div>
+    </div>
+
+    ${!mostrandoFormGasto ? `<button class="btn-oro" onclick="mostrarFormGasto()">+ Agregar gasto / materia prima</button>` : `
+      <div class="form-comida">
+        <div class="campo"><label>Descripción</label><input id="g-descripcion" placeholder="Ej: Harina, queso, caja de pollo"></div>
+        <div class="campo"><label>Costo</label><input id="g-monto" type="number"></div>
+        <div class="campo"><label>Fecha</label><input id="g-fecha" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-oro" onclick="guardarGasto()">Guardar</button>
+          <button class="btn-secundario-admin" onclick="ocultarFormGasto()">Cancelar</button>
+        </div>
+      </div>
+    `}
+
+    ${dias.length === 0 ? `<div class="vacio">No hay movimientos para mostrar.</div>` : dias.map(clave => {
+      const items = porDia[clave];
+      const subtotal = items.reduce((t, m) => t + (m.tipo === "venta" ? m.monto : -m.monto), 0);
+      return `
+        <div class="grupo-dia">
+          <div class="cabecera-dia">
+            <span>${formatoFechaLarga(clave)}</span>
+            <span class="${subtotal >= 0 ? "positivo" : "negativo"}">${subtotal >= 0 ? "+" : "−"}${money(Math.abs(subtotal))}</span>
+          </div>
+          ${items.map(m => `
+            <div class="fila-movimiento">
+              <span>${esc(m.descripcion)}</span>
+              <span class="${m.tipo === "venta" ? "positivo" : "negativo"}">${m.tipo === "venta" ? "+" : "−"}${money(m.monto)}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }).join("")}
+  `;
+}
+
+function renderAdminDatos(){
+  return `
+    <div class="campo"><label>Nombre del negocio</label><input id="cfg-nombre" value="${esc(configNegocio.nombreNegocio)}"></div>
+    <div class="campo"><label>Frase debajo del nombre</label><input id="cfg-tagline" value="${esc(configNegocio.tagline)}"></div>
+    <div class="campo"><label>Alias para transferencias</label><input id="cfg-alias" value="${esc(configNegocio.transferenciaAlias)}"></div>
+    <div class="campo"><label>CBU (opcional)</label><input id="cfg-cbu" value="${esc(configNegocio.transferenciaCBU)}"></div>
+    <div class="campo"><label>Dirección del local (para retiro)</label><input id="cfg-direccion" value="${esc(configNegocio.direccionRetiro)}"></div>
+    <button class="btn-oro" onclick="guardarDatosNegocio()">Guardar datos</button>
+  `;
+}
+
+/* ======================================================================
+   5) PANTALLA DE INSTALACIÓN (se muestra si falta configurar Firebase)
+   ====================================================================== */
+function renderSetup(){
+  return `
+    <div class="setup">
+      <h1>Falta un paso para activar la app</h1>
+      <p>Este archivo necesita un proyecto de Firebase gratuito para guardar el menú y los pedidos.</p>
+      <ol>
+        <li>Entrá a <code>console.firebase.google.com</code> y creá un proyecto nuevo.</li>
+        <li>Dentro del proyecto, andá a <b>Firestore Database</b> → crear base de datos → modo producción.</li>
+        <li>En <b>Reglas</b> de Firestore, pegá esto (permite leer el menú y crear pedidos; para editar/borrar hace falta conocer la URL <code>#admin</code>):</li>
+      </ol>
+      <pre>rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /comidas/{doc} { allow read: if true; allow write: if true; }
+    match /config/{doc}  { allow read: if true; allow write: if true; }
+    match /pedidos/{doc} { allow read, write: if true; }
+    match /movimientos/{doc} { allow read, write: if true; }
+  }
+}</pre>
+      <ol start="4">
+        <li>Andá a ⚙ <b>Configuración del proyecto</b> → bajá hasta "Tus apps" → creá una app web → copiá el objeto <code>firebaseConfig</code>.</li>
+        <li>Abrí este archivo con un editor de texto y pegá esos datos donde dice <code>firebaseConfig</code>, cerca del principio del archivo.</li>
+        <li>Guardá el archivo y volvé a abrirlo. Ya vas a poder cargar comidas desde <code>#admin</code> (usuario/contraseña definidos arriba en el código).</li>
+      </ol>
+    </div>
+  `;
+}
+
+/* ======================================================================
+   6) RENDER PRINCIPAL
+   ====================================================================== */
+function render(){
+  if(SIN_CONFIGURAR){
+    document.getElementById("app").innerHTML = renderSetup();
+    return;
+  }
+  let html;
+  if(vista === "cliente") html = renderCliente();
+  else if(vista === "admin-login") html = renderAdminLogin();
+  else html = renderAdmin();
+  document.getElementById("app").innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
