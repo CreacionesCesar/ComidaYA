@@ -957,7 +957,7 @@ async function activarNotificaciones(){
   try{
     const permiso = await Notification.requestPermission();
     if(permiso !== "granted") return;
-    const registro = await navigator.serviceWorker.register("firebase-messaging-sw.js");
+    const registro = await navigator.serviceWorker.register("sw.js");
     const messaging = firebase.messaging();
     const token = await messaging.getToken({
       vapidKey: "BLeD1RbJ6W50lVHmOn8-aUknPf1bLceLWqclZCzompcumlIIxds8WZX528uvuJII1vOwu4MnsNwOr0crhT-1Mdo",
