@@ -1,7 +1,8 @@
+importScripts("firebase-messaging-sw.js");
 // Service worker mínimo: solo guarda el "cascarón" de la app para que abra
 // aunque no haya conexión. El menú, los pedidos y todo lo demás siguen
 // viajando siempre en vivo contra Firebase, esto no los cachea.
-const CACHE_NAME = "comidaya-shell-v1";
+const CACHE_NAME = "comidaya-shell-v2";
 const ARCHIVOS_APP = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", event => {
